@@ -118,3 +118,48 @@ export const createProperty = mutation({
         return newPropertyId;
     },
 });
+
+export const searchProperties = query({
+    args: {
+        north: v.number(),
+        south: v.number(),
+        east: v.number(),
+        west: v.number(),
+        minPrice: v.number(),
+        maxPrice: v.number(),
+        bedrooms: v.number(),
+        propertyType: v.string(),
+    },
+    handler: async (ctx, args) => {
+        // 1. Perform the heavy lifting using the database index first
+        const properties = await ctx.db
+            .query("properties")
+            .collect();
+
+        return properties.filter((property) => {
+            // Check Map Bounds
+            const withinLatitude = property.latitude >= args.south && property.latitude <= args.north;
+            const withinLongitude = property.longitude >= args.west && property.longitude <= args.east;
+            if (!withinLatitude || !withinLongitude) return false;
+
+            // Check Property Type
+            if (args.propertyType !== "all" && property.propertyType !== args.propertyType) {
+                return false;
+            }
+
+            // Check Bedrooms (we treat the slider as a "minimum" value)
+            if (args.bedrooms > 0 && property.bedrooms < args.bedrooms) {
+                return false;
+            }
+
+            // Check Price Constraints
+            if (property.price < args.minPrice) return false;
+            // If the slider is at max (100M+), we treat it as infinite
+            if (args.maxPrice < 100000000 && property.price > args.maxPrice) {
+                return false;
+            }
+
+            return true;
+        });
+    },
+});

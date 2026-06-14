@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
@@ -48,15 +48,13 @@ export default function AgentDashboard() {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Dashboard Top Nav */}
-            <header className="bg-white border-b px-8 py-4 flex items-center text-gray-900
-            justify-between shadow-sm">
+            <header className="px-18 py-4 flex items-center text-gray-900 justify-between">
                 <h1 className="text-xl font-bold">
                     Agent Dashboard
                 </h1>
                 <div className="flex items-center">
                     Welcome back, {user.firstName}
                 </div>
-                <UserButton/>
             </header>
 
             {/* Main Content Area */}
