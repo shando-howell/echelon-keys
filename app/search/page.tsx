@@ -1,10 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import PropertyCard from "../components/PropertyCard";
-import PropertyMapViewer from "../components/PropertyMapViewer";
 
 // A simple hook to debounce fast-changing state values
 function useDebounce<T>(value: T, delay: number): T {
@@ -21,7 +21,19 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+const PropertyMapViewer = dynamic(
+    () => import("../components/PropertyMapViewer"),
+    {
+        ssr: false,
+        loading: () => <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 animate-pulse">
+            Loading Map Engine...
+        </div>
+    }
+);
+
 export default function RealEstateSearchPage() {
+    
+
     // 1. Raw map viewport state (changes continuously as user pans)
     const [mapBounds, setMapBounds] = useState({
         north: 18.0500,

@@ -1,5 +1,9 @@
 "use client";
 
+import { useRef, useCallback } from "react";
+import Map, { Marker, MapRef } from "react-map-gl/mapbox";
+import "mapbox-gl/dist/mapbox-gl.css";
+
 interface MapBounds {
     north: number;
     south: number;
@@ -22,105 +26,65 @@ interface MapViewerProps {
 }
 
 export default function PropertyMapViewer({
-    currentBounds,
     onBoundsChange,
     properties,
 }: MapViewerProps) {
-    // A helper function simulating a map pan action to a different neighborhood area
-    const simulateMapShift = (direction: string) => {
-        const step = 0.02; // Coordinate offset shift size
-        let { north, south, east, west } = currentBounds;
+    const mapRef = useRef<MapRef>(null);
 
-        switch (direction) {
-            case "north":
-                north += step; south += step; break;
-            case "south":
-                north -= step; south -= step; break;
-            case "east":
-                east += step; west += step; break;
-            case "west":
-                east -= step; west -= step; break;
-        }
-        
-        onBoundsChange({ north, south, east, west });
-    };
+    // When the user stops dragging the map, we extract the new GPS box
+    // and pass it up to trigger our debounced Convex query.
+    const handleMoveEnd = useCallback(() => {
+        if (!mapRef.current) return;
+
+        const bounds = mapRef.current.getMap().getBounds();
+
+        if (!bounds) return;
+
+        onBoundsChange({
+            north: bounds.getNorth(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            west: bounds.getWest(),
+        });
+    }, [onBoundsChange]);
 
     return (
-            <div className="w-full h-full relative bg-slate-100 
-            flex flex-col justify-between p-4 bg-[radial-gradient(#e2e8f0_1px, transparent_1px)]
-            bg-size:16px_16px">
-                {/* Map Interactive Directional Controls */}
-                <div className="absolute top-4 left-4 z-20 flex flex-col gap-1 bg-white p-2 
-                rounded-xl shadow-md border">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase text-center mb-1">
-                        Pan Map
-                    </span>
-                    <div className="grid grid-cols-3 gap-1 w-24 mx-auto">
-                        <div></div>
-                        <button 
-                            onClick={() => simulateMapShift("north")} 
-                            className="p-1 bg-gray-50 hover:bg-gray-100 border rounded text-xs 
-                            text-center font-bold"
+        <div className="w-full h-full relative">
+            <Map
+                ref={mapRef}
+                mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN}
+                initialViewState={{
+                    longitude: -76.7984, // Centered right over Kingston
+                    latitude: 18.0128,
+                    zoom: 11
+                }}
+                mapStyle="mapbox://styles/mapbox/streets-v12"
+                onMoveEnd={handleMoveEnd}
+                reuseMaps
+            >
+                {/* Render active database rows as visual pins */}
+                {properties.map((prop) => (
+                    <Marker
+                        key={prop._id}
+                        longitude={prop.longitude}
+                        latitude={prop.latitude}
+                        anchor="bottom"
+                        onClick={(e) => {
+                            // Prevents the map from panning when a user clicks a pin
+                            e.originalEvent.stopPropagation();
+                        }}
+                    >
+                        <div
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-bold 
+                            text-xs px-2 py-1 rounded-full shadow-md cursor-pointer tansition-transform transform hover:scale-105
+                            flex items-center gap-1 border-2 border-white"
                         >
-                                ▲
-                        </button>
-                        <div></div>
-                        <button 
-                            onClick={() => simulateMapShift("west")} 
-                            className="p-1 bg-gray-50 hover:bg-gray-100 border rounded text-xs 
-                            text-center font-bold">
-                                ◀
-                        </button>
-                        <div className="bg-gray-200 rounded-sm"></div>
-                        <button onClick={() => simulateMapShift("east")} className="p-1 bg-gray-50 hover:bg-gray-100 border rounded text-xs text-center font-bold">▶</button>
-                        <div></div>
-                        <button onClick={() => simulateMapShift("south")} className="p-1 bg-gray-50 hover:bg-gray-100 border rounded text-xs text-center font-bold">▼</button>
-                    </div>
-                </div>
-
-                {/* Floating Coordinate Status HUD */}
-                <div className="absolute bottom-4 right-4 z-20 bg-slate-900/90 text-white font-mono 
-                text-[10px] p-3 rounded-lg shadow-xl backdrop-blur-sm border border-slate-700 flex 
-                flex-col gap-1">
-                    <div className="text-cyan-400 font-bold border-b border-slate-700 pb-1 mb-1 
-                    uppercase tracking-wider">Viewport Engine HUD</div>
-                    <div>N: {currentBounds.north.toFixed(4)}</div>
-                    <div>S: {currentBounds.south.toFixed(4)}</div>
-                    <div>E: {currentBounds.east.toFixed(4)}</div>
-                    <div>W: {currentBounds.west.toFixed(4)}</div>
-                </div>
-
-                {/* Canvas Layer for Simulated Property Pins */}
-                <div className="flex-1 w-full relative flex items-center justify-center">
-                    {properties.length === 0 ? (
-                        <div className="text-xs font-medium text-gray-400 bg-white/80 border px-4 py-2 
-                        rounded-full shadow-sm select-none">
-                            No listings visible on canvas
+                            <span>📍</span>
+                            <span>{(prop.price / 1000000).toFixed(1)}M</span>
                         </div>
-                    ) : (
-                        <div className="absolute inset-0 pointer-events-none flex items-center
-                        justify-center">
-                            {properties.map((prop, idx) => {
-                                // Distribute pins dynamically across the mock canvas view area safely
-                                const topPercent = 20 + (idx * 25) % 60;
-                                const leftPercent = 30 + (idx * 25) % 50;
-
-                                return (
-                                    <div 
-                                        key={prop._id}
-                                        className="absolute pointer-events-auto bg-blue-600 hover:bg-blue-700 text-white font-bold 
-                                        text-xs px-2 py-1 rounded-full shadow-md cursor-pointer tansition-transform transform hover:scale-105
-                                        flex items-center gap-1 border-2 border-white"
-                                        style={{ top: `${topPercent}%`, left: `${leftPercent}%` }}
-                                    >
-                                        <span>📍</span>
-                                        <span>{(prop.price / 1000000).toFixed(1)}M</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
+                    </Marker>
+                ))}
+            </Map>    
+        </div>
+    );
 }
