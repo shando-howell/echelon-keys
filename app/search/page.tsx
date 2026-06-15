@@ -68,7 +68,12 @@ export default function RealEstateSearchPage() {
             {/* Left Column: The Filter Sidebar */}
             <div className="w-full md:w-80 flex-shrink-0 z-10 shadow-[4px_0_24px_rgba(0,0,0,0.05)]
             relative bg-white">
-                <FilterSidebar filters={filters} onFilterChange={setFilters} />
+                <FilterSidebar 
+                    filters={filters} 
+                    onFilterChange={setFilters} 
+                    // @ts-expect-error: Type mismatch
+                    properties={properties || []}
+                />
             </div>
 
             {/* Right Column: The Geospatial Engine */}

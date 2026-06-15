@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 export const getByBounds = query({
     args: {
@@ -132,34 +133,57 @@ export const searchProperties = query({
     },
     handler: async (ctx, args) => {
         // 1. Perform the heavy lifting using the database index first
-        const properties = await ctx.db
+        const rawProperties = await ctx.db
             .query("properties")
+            .filter((q) => {
+                const conditions = [
+                    q.gte(q.field("latitude"), args.south),
+                    q.lte(q.field("latitude"), args.north),
+                    q.gte(q.field("longitude"), args.west),
+                    q.lte(q.field("longitude"), args.east),
+                    q.gte(q.field("price"), args.minPrice),
+                    q.gte(q.field("bedrooms"), args.bedrooms),
+                ];
+
+                if (args.maxPrice < 100000000) {
+                    conditions.push(q.lte(q.field("price"), args.maxPrice))
+                }
+
+                // Check Property Type
+                if (args.propertyType !== "all") {
+                    conditions.push(q.eq(q.field("propertyType"), args.propertyType))
+                }
+
+                return q.and(...conditions);
+            })
             .collect();
 
-        return properties.filter((property) => {
-            // Check Map Bounds
-            const withinLatitude = property.latitude >= args.south && property.latitude <= args.north;
-            const withinLongitude = property.longitude >= args.west && property.longitude <= args.east;
-            if (!withinLatitude || !withinLongitude) return false;
+        // 2. Convert the internal storage IDs to valid URLS
+        const propertiesWithUrls = await Promise.all(
+            rawProperties.map(async (property) => {
+                const resolvedUrls = property.imageIds && property.imageIds.length > 0
+                    ? await Promise.all(property.imageIds.map(async (id) => {
+                        const url = await ctx.storage.getUrl(id as Id<"_storage">);
 
-            // Check Property Type
-            if (args.propertyType !== "all" && property.propertyType !== args.propertyType) {
-                return false;
-            }
+                        console.log(`Resolving ID [${id}]:`, url ? "SUCCESS" : "FAILED - Returning null")
 
-            // Check Bedrooms (we treat the slider as a "minimum" value)
-            if (args.bedrooms > 0 && property.bedrooms < args.bedrooms) {
-                return false;
-            }
+                        return url;
+                        }))
+                    : [];
 
-            // Check Price Constraints
-            if (property.price < args.minPrice) return false;
-            // If the slider is at max (100M+), we treat it as infinite
-            if (args.maxPrice < 100000000 && property.price > args.maxPrice) {
-                return false;
-            }
+                const validUrls = resolvedUrls.filter((url) => url !== null);
 
-            return true;
-        });
-    },
+                const hydratedProperty =  {
+                    ...property,
+                    imageUrl: validUrls.length > 0 ? validUrls[0] : null,
+                    imageUrls: validUrls,
+                }
+
+                console.log(`Outbound Payload for [${hydratedProperty._id}]:`, hydratedProperty.imageUrl);
+
+                return hydratedProperty;
+            })
+        );
+        return propertiesWithUrls;
+    }
 });

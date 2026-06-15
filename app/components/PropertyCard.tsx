@@ -1,18 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import { Id } from "@/convex/_generated/dataModel";
 
-interface Property {
+export interface Property {
     _id: Id<"properties">;
     title: string;
     description: string;
     price: number;
     propertyType: string;
+    imageUrl?: string;
     status: string;
     bedrooms: number;
     bathrooms: number;
     squareFeet: number;
-    imageIds: Id<"_storage">[];
 }
 
 interface PropertyCardProps {
@@ -32,15 +33,18 @@ export default function PropertyCard({ property }: PropertyCardProps) {
         hover:shadow-md transition-shadow duration-200 flex flex-col sm:flex-row h-auto sm:h-40 w-full">
             {/* Property Thumbnail */}
             <div className="relative w-full sm:w-40 h-40 bg-gray-200 shrink-0">
-                <img
-                    src={
-                        property.imageIds.length > 0
-                            ? `https://wonderful-wombat-123.convex.cloud/api/storage/get/${property.imageIds[0]}`
-                            : "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=400&q=80"
-                    }
-                    alt={property.title}
-                    className="w-full h-full object-cover"
-                />
+                {property.imageUrl ? (
+                    <Image
+                        src={property.imageUrl}
+                        alt={property.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                ) : (
+                    <div className="flex items-center justify-center w-full h-full text-gray-400">
+                        No Image
+                    </div>
+                )}
                 <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-xs font-semibold
                 uppercase tracking-wide shadow-sm text-white ${
                     property.status === "active" ? "bg-green-650" : "bg-amber-600"
