@@ -1,14 +1,22 @@
+import HeroText from "./components/HeroText";
+import Image from "next/image";
+
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50">
-      <div className="text-center">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">
-          Echelon Keys
-        </h1>
-        <p className="text-gray-500 mb-8 max-w-md mx-auto">
-          Manage your listings and streamline your property workflow.
-        </p>
+    <main className="relative h-screen w-full overflow-hidden flex items-center justify-center">
+      {/* Static Background Image - Server Rendered */}
+      <div className="absolute inset-0 z-0 bg-gray-900">
+        <Image
+          src="/images/luxury-villa.jpg"
+          alt="Luxury Villa in Kingston"
+          fill
+          className="object-cover opacity-60"
+          priority
+        />
       </div>
-    </div>
+
+      {/* Animated Hero Text */}
+      <HeroText />
+    </main>
   );
 }

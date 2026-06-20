@@ -25,6 +25,14 @@ export default function Navbar() {
                         {/* Desktop Navigation Links */}
                         <div className="hidden sm:ml-6 sm:flex">
                             <Link
+                                href="/listings"
+                                className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md
+                                text-sm font-medium transition-colors"
+                            >
+                                Listings
+                            </Link>
+                            
+                            <Link
                                 href="/search"
                                 className="text-gray-600 hover:text-blue-600 px-3 py-2 rounded-md
                                 text-sm font-medium transition-colors"

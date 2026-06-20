@@ -5,6 +5,7 @@ export default defineSchema({
     properties: defineTable({
         title: v.string(),
         description: v.string(),
+        location: v.optional(v.string()),
         price: v.number(),
         propertyType: v.string(),
         status: v.string(),

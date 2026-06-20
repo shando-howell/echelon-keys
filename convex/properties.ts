@@ -1,4 +1,5 @@
 import { query, mutation } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
@@ -186,4 +187,44 @@ export const searchProperties = query({
         );
         return propertiesWithUrls;
     }
+});
+
+export const searchPaginatedProperties = query({
+    args: {
+        // The built-in validator for the cursor state
+        paginationOpts: paginationOptsValidator,
+
+        // The search parameters passed from the Next.js client component
+        location: v.string(),
+        bedrooms: v.number(),
+    }, 
+    handler: async (ctx, args) => {
+        // Initialize the base query
+        let propertiesQuery = ctx.db.query("properties");
+
+        const hasLocation = args.location !== "";
+        const hasBedrooms = args.bedrooms > 0;
+
+        //  Only apply the .filter() method if we actually have active filters
+        if (hasLocation || hasBedrooms) {
+            propertiesQuery = propertiesQuery.filter((q) => {
+                // Both filters applied
+                if (hasLocation && hasBedrooms) {
+                    return q.and(
+                        q.eq(q.field("location"), args.location),
+                        q.gte(q.field("bedrooms"), args.bedrooms)
+                    );
+                }
+
+                        // Single filters applied
+                        if (hasLocation) {
+                            return q.eq(q.field("location"), args.location);
+                        }
+
+                        return q.gte(q.field("bedrooms"), args.bedrooms);
+                    });
+                }
+
+                return await propertiesQuery.paginate(args.paginationOpts);
+    },
 });
